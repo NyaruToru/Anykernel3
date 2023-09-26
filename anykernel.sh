@@ -20,7 +20,7 @@ supported.patchlevels=
 '; } # end properties
 
 # shell variables
-block=/dev/block/bootdevice/by-name/boot;
+block=/dev/block/bootdevice/by-name/boot
 is_slot_device=0;
 ramdisk_compression=none;
 
@@ -28,24 +28,23 @@ ramdisk_compression=none;
 # import patching functions/variables - see for reference
 . tools/ak3-core.sh;
 
-## AnyKernel install
-# dump_boot;
-split_boot;
+set_perm_recursive 0 0 755 644 $ramdisk/*;
+set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 
-ui_print "";
-ui_print "################################";
-ui_print "Kernel support chat in Telegram:";
-ui_print "####### t.me/godcalintosurya #######";
-ui_print "################################";
-ui_print "";
+dump_boot;
+mount -o rw /data;
 
-if [ -f $split_img/ramdisk.cpio ]; then
-  unpack_ramdisk;
-  repack_ramdisk;
+if [ ! -d /data/adb/service.d ]; then
+mkdir /data/adb;
+mkdir /data/adb/service.d;
 fi;
+replace_file /data/adb/service.d/init.qcom.post_boot.sh 0777 init.qcom.post_boot.sh;
+if [ -d $ramdisk/.backup ]; then
+  ui_print " "; ui_print "Reinstall Magisk.zip!!!!!...";
+  patch_cmdline "skip_override" "skip_override";
+else
+  patch_cmdline "skip_override" "";
+fi;
+remove_section init.rc "service flash_recovery" "";
+write_boot;
 
-flash_boot;
-flash_dtbo;
-# backup_file init.rc;
-
-## end install
