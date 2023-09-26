@@ -35,7 +35,7 @@ split_boot;
 ui_print "";
 ui_print "################################";
 ui_print "Kernel support chat in Telegram:";
-ui_print "####### t.me/suryarabitekernel #######";
+ui_print "####### t.me/godcalintosurya #######";
 ui_print "################################";
 ui_print "";
 
