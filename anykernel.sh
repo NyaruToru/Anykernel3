@@ -65,6 +65,170 @@ else
 fi
 
 
+ksu_dir="kernel/ksu"
+stock_dir="kernel/stock"
+
+case "$(basename "$ZIPFILE" .zip | tr '[:upper:]' '[:lower:]')" in
+*ksu*)
+    sleep 1
+    ui_print " "
+    ui_print "[!] Installing with KSU support..."
+    cd "$ksu_dir" || exit 1
+    if mv Image_ksu ../../Image && mv dtbo_ksu.img ../../dtbo.img; then
+        sleep 1
+    else
+        sleep 0.5
+        ui_print "[!] Error while copying files!"
+    fi
+    ;;
+*stock*)
+    sleep 1
+    ui_print " "
+    ui_print "[!] Installing w/o KSU support..."
+    cd "$stock_dir" || exit 1
+    if mv Image_stock ../../Image && mv dtbo_stock.img ../../dtbo.img; then
+        sleep 1
+    else
+        sleep 0.5
+        ui_print "[!] Error while copying files!"
+    fi
+    ;;
+*)
+
+    INSTALLER=$(pwd)
+    KEYCHECK="$INSTALLER/tools/keycheck"
+    chmod 755 "$KEYCHECK"
+
+    choosenew() {
+        local delay=25
+        local error=false
+        sleep 1
+        ui_print " "
+        ui_print "[!] Press any volume key first!"
+        while true; do
+            timeout "$delay" "$KEYCHECK"
+            local sel=$?
+            if [ $sel -eq 42 ] || [ $sel -eq 21 ]; then
+                ui_print "[+] Done!"
+                sleep 0.5
+                return 0
+            elif $error; then
+                ui_print "[!] Try re-flash zip again!"
+                sleep 0.5
+                exit 1
+            else
+                error=true
+                ui_print "[!] Vol key not detected. Try again!"
+                sleep 0.5
+            fi
+        done
+    }
+
+    choose() {
+        local delay=25
+        local error=false
+        while true; do
+            timeout "$delay" "$KEYCHECK"
+            local sel=$?
+            if [ $sel -eq 42 ]; then
+                return 0
+            elif [ $sel -eq 21 ]; then
+                return 1
+            elif $error; then
+                ui_print "[!] Try re-flash zip again!"
+                exit 1
+            else
+                error=true
+                ui_print "[!] Vol key not detected. Try again!"
+            fi
+        done
+    }
+
+    chooseold() {
+        local delay=25
+        local error=false
+        while true; do
+            local count=0
+            while true; do
+                timeout "$delay" /system/bin/getevent -lqc 1 2>&1 >"$INSTALLER/events" &
+                sleep 0.5
+                count=$((count + 1))
+                if grep -q 'KEY_VOLUMEUP *DOWN' "$INSTALLER/events"; then
+                    return 0
+                elif grep -q 'KEY_VOLUMEDOWN *DOWN' "$INSTALLER/events"; then
+                    return 1
+                fi
+                [ $count -gt 25 ] && break
+            done
+            if $error; then
+                ui_print "[!] Try re-flash zip again!"
+                "$KEYCHECK"
+                exit 1
+            else
+                error=true
+                ui_print "[!] Vol key not detected. Try again!"
+            fi
+        done
+    }
+
+    if [ -z "$NEW" ]; then
+        if choosenew; then
+            FUNCTION=choose
+        else
+            FUNCTION=chooseold
+            ui_print " "
+            ui_print "[!] Vol Key Programming"
+            ui_print "[!] Press the volume key + : "
+            "$FUNCTION" "UP"
+            ui_print "[!] Press the volume key - : "
+            "$FUNCTION" "DOWN"
+        fi
+
+        sleep 1
+        ui_print " "
+        ui_print "[!] Select kernel variant:"
+        ui_print "    + Volume + = KSU support"
+        ui_print "    - Volume - = Non-KSU support"
+
+        if "$FUNCTION"; then
+            ui_print "[+] KSU support selected"
+            sleep 0.5
+            NEW=true
+        else
+            ui_print "[+] Non-KSU support selected"
+            sleep 0.5
+            NEW=false
+        fi
+    else
+        ui_print "[!] Try re-flash zip again!"
+    fi
+
+    if [ "$NEW" == "true" ]; then
+        sleep 1
+        ui_print " "
+        ui_print "[!] Installing with KSU support..."
+        cd "$ksu_dir" || exit 1
+        if mv Image_ksu ../../Image && mv dtbo_ksu.img ../../dtbo.img; then
+            sleep 1
+        else
+            sleep 0.5
+            ui_print "[!] Error while copying files!"
+        fi
+    else
+        sleep 1
+        ui_print " "
+        ui_print "[!] Installing w/o KSU support..."
+        cd "$stock_dir" || exit 1
+        if mv Image_stock ../../Image && mv dtbo_stock.img ../../dtbo.img; then
+            sleep 1
+        else
+            sleep 0.5
+            ui_print "[!] Error while copying files!"
+        fi
+    fi
+    ;;
+esac
+
 dump_boot;
 mount -o rw /data;
 
