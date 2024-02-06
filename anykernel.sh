@@ -38,10 +38,10 @@ no_block_display=1;
 
 if [ -e "/tmp/recovery.log" ]; then
     if mountpoint -q /external_sd; then
-        backup_location="/external_sd/backup_boot.img"
+        backup_location="/external_sd/backup_boot-$(date '+%H%M%y%m%d').img"
         ui_print "[!] Backing up boot in external SDCard..."
     else
-        backup_location="/sdcard/backup_boot.img"
+        backup_location="/external_sd/backup_boot-$(date '+%H%M%y%m%d').img"
         ui_print "[!] Backing up boot in internal storage..."
     fi
     dd if=/dev/block/by-name/boot of="$backup_location"
@@ -52,7 +52,7 @@ if [ -e "/tmp/recovery.log" ]; then
     fi
 elif [ "$(id -u)" == "0" ]; then
     ui_print "[!] Backing up boot in internal storage..."
-    backup_location="/sdcard/backup_boot.img"
+    backup_location="/external_sd/backup_boot-$(date '+%H%M%y%m%d').img"
     dd if=/dev/block/by-name/boot of="$backup_location"
     if [ $? != 0 ]; then
         ui_print "[!] Backup failed; proceeding anyway . . ."
@@ -67,6 +67,7 @@ fi
 
 ksu_dir="kernel/ksu"
 stock_dir="kernel/stock"
+
 
 case "$(basename "$ZIPFILE" .zip | tr '[:upper:]' '[:lower:]')" in
 *ksu*)
@@ -246,30 +247,43 @@ fi;
 remove_section init.rc "service flash_recovery" "";
 write_boot;
 
+ui_print "[+] Done!"
+sleep 1
+ui_print " "
+ui_print "[!] Wiping dalvik & cache"
+rm -rf /data/dalvik-cache/*
+ui_print "[+] Done!"
+sleep 2
 
 if [ -e "/tmp/recovery.log" ]; then
-    ui_print "[+] Done!"
-    mkdir -p /sdcard/logs
+    if mountpoint -q /external_sd; then
+	    mkdir -p /external_sd/logs || exit 1
+        logs_location="/external_sd/logs"
+    else
+    	mkdir -p /sdcard/logs || exit 1
+        logs_location="/sdcard/logs"
+    fi
     ui_print " "
     ui_print "[!] Backing up recovery.log..."
     BASENAME=$(basename "$ZIPFILE" .zip)
-    cp -a /tmp/recovery.log /sdcard/logs/$(date '+%H%M%y%m%d')-"$BASENAME".log
-    sleep 2
-    ui_print "[+] Saved in sdcard/logs/."
-    sleep 0.5
-    ui_print " "
-    ui_print "[!] Rebooting in 3 seconds..."
-    sleep 0.5
-    ui_print "    -3s..."
-    sleep 0.5
-    ui_print "    -2s..."
-    sleep 0.5
-    ui_print "    -1s..."
-    sleep 0.5
-    ui_print " "
-    ui_print "[!] Rebooting now..."
-    reboot
-    sleep 3
-    ui_print " "
-    ui_print "[!] Something failed. Reboot manually..."
+    cp -a /tmp/recovery.log $logs_location/$(date '+%H%M%y%m%d')-"$BASENAME".log || exit 1
+    sleep 1
+    ui_print "[+] Saved in $logs_location"
+    sleep 1
 fi
+
+ui_print " "
+ui_print "[!] Rebooting in 3 seconds..."
+sleep 1
+ui_print "[+] -3s..."
+sleep 1
+ui_print "[+] -2s..."
+sleep 1
+ui_print "[+] -1s..."
+sleep 1
+ui_print " "
+ui_print "[!] Rebooting now..."
+reboot
+sleep 3
+ui_print " "
+ui_print "[!] Something failed. Reboot manually!"
