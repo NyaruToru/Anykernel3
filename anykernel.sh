@@ -6,7 +6,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=Strawberry for Poco X3 (NFC) by Telegram@NyaruToru
+kernel.string=Kernel ForPoco X3 (NFC) by Telegram@NyaruToru
 do.devicecheck=1
 do.modules=0
 do.systemless=0
@@ -17,7 +17,7 @@ device.name2=karna
 device.name3=surya_in
 device.name4=karna_in
 device.name5=
-supported.versions=11.0-14.1
+supported.versions=10.0-11.0
 supported.patchlevels=
 '; } # end properties
 
@@ -39,20 +39,6 @@ no_block_display=1;
 . tools/ak3-core.sh;
 
 dump_boot;
-mount -o rw /data;
-
-if [ ! -d /data/adb/service.d ]; then
-mkdir /data/adb;
-mkdir /data/adb/service.d;
-fi;
-replace_file /data/adb/service.d/init.qcom.post_boot.sh 0777 init.qcom.post_boot.sh;
-if [ -d $ramdisk/.backup ]; then
-  ui_print " "; ui_print "Reinstall Magisk.zip!!!!!...";
-  patch_cmdline "skip_override" "skip_override";
-else
-  patch_cmdline "skip_override" "";
-fi;
-remove_section init.rc "service flash_recovery" "";
 write_boot;
 
 ui_print "[+] Done!"
